@@ -465,6 +465,7 @@ class imitation_reward:
     command = env.command_manager.get_command(command_name)
     assert command is not None
     phase_clock = env.command_manager.get_term(command_name)
+    assert phase_clock is not None
     freq_base = getattr(phase_clock.cfg, "gait_freq_base", 0.5)
     freq_speed_scale = getattr(phase_clock.cfg, "gait_freq_speed_scale", 0.0)
     speed = torch.norm(command[:, :2], dim=1)

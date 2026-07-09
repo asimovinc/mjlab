@@ -5,14 +5,11 @@ from mjlab.rl import (
   RslRlOnPolicyRunnerCfg,
   RslRlPpoAlgorithmCfg,
 )
+from mjlab.tasks.velocity.mdp.symmetry import data_augmentation_func
 
 
 def asimov_1_ppo_runner_cfg() -> RslRlOnPolicyRunnerCfg:
-  """Create RL runner configuration for the Asimov 1 velocity task.
-
-  Uses a larger MLP than the legs-only setup due to the larger action and
-  observation spaces of the full-body robot.
-  """
+  """Create RL runner configuration for the Asimov 1 velocity task."""
   return RslRlOnPolicyRunnerCfg(
     actor=RslRlModelCfg(
       hidden_dims=(512, 256, 128),
@@ -42,9 +39,14 @@ def asimov_1_ppo_runner_cfg() -> RslRlOnPolicyRunnerCfg:
       lam=0.95,
       desired_kl=0.01,
       max_grad_norm=1.0,
-      # The older reference config also enabled symmetry augmentation and
-      # mirror loss here. The current mjlab PPO config does not expose a
-      # symmetry_cfg field, so that part is not represented in this file.
+      # Mirror every transition left/right so the policy learns a symmetric
+      # gait instead of a spontaneous limp.
+      symmetry_cfg={
+        "use_data_augmentation": True,
+        "use_mirror_loss": True,
+        "mirror_loss_coeff": 1.0,
+        "data_augmentation_func": data_augmentation_func,
+      },
     ),
     experiment_name="asimov_1_velocity",
     save_interval=50,

@@ -57,6 +57,7 @@ class _MotorSpec:
   saturation_effort: float
   velocity_limit: float
   frictionloss: float
+  viscous_damping: float
 
 
 @dataclass(frozen=True)
@@ -65,61 +66,68 @@ class _PdGains:
   damping: float
 
 
-# Armature values match the joint armatures in `asimov_1.xml`.
-# For the A4310 family, the ankle joints use the doubled parallel-link value,
-# while elbow and wrist use the single-motor value from the XML.
+# Motor output-side reflected inertia (armature), Coulomb friction
+# (frictionloss), and viscous damping, from hardware characterization. These
+# override the placeholder joint values in `asimov_1.xml`.
 A6416 = _MotorSpec(
-  armature=0.095625,
+  armature=0.0698,
   effort_limit=40.0,
   saturation_effort=120.0,
   velocity_limit=12.57,
   frictionloss=0.70,
+  viscous_damping=0.050,
 )
 A5013 = _MotorSpec(
-  armature=0.11,
+  armature=0.1400,
   effort_limit=30.0,
   saturation_effort=90.0,
   velocity_limit=3.98,
   frictionloss=0.20,
+  viscous_damping=0.020,
 )
 A3814 = _MotorSpec(
-  armature=0.038,
+  armature=0.0687,
   effort_limit=20.0,
   saturation_effort=60.0,
   velocity_limit=5.45,
   frictionloss=0.70,
+  viscous_damping=0.050,
 )
 A4315 = _MotorSpec(
-  armature=0.0339552,
+  armature=0.0330,
   effort_limit=25.0,
   saturation_effort=75.0,
   velocity_limit=12.25,
   frictionloss=0.70,
+  viscous_damping=0.020,
 )
 A4310_ANKLE_PITCH = _MotorSpec(
-  armature=0.0565056,
+  armature=0.0484,
   effort_limit=40.0,
   saturation_effort=145.4,
   velocity_limit=9.32,
   frictionloss=0.40,
+  viscous_damping=0.015,
 )
 A4310_ANKLE_ROLL = _MotorSpec(
-  armature=0.0565056,
+  armature=0.0484,
   effort_limit=17.0,
   saturation_effort=57.6,
   velocity_limit=9.32,
   frictionloss=0.40,
+  viscous_damping=0.015,
 )
 A4310_SINGLE = _MotorSpec(
-  armature=0.0282528,
+  armature=0.0242,
   effort_limit=12.0,
   saturation_effort=36.0,
   velocity_limit=9.32,
   frictionloss=0.40,
+  viscous_damping=0.015,
 )
 
 
-# current full-body values used with this MJCF.
+# PD gains (stiffness, damping) per joint group.
 HIP_PITCH_GAINS = _PdGains(150.0, 5.0)
 HIP_ROLL_GAINS = _PdGains(150.0, 5.0)
 HIP_YAW_GAINS = _PdGains(150.0, 5.0)
@@ -132,10 +140,6 @@ SHOULDER_ROLL_GAINS = _PdGains(86.0, 5.0)
 SHOULDER_YAW_GAINS = _PdGains(96.0, 5.0)
 ELBOW_GAINS = _PdGains(40.0, 2.0)
 WRIST_YAW_GAINS = _PdGains(40.0, 2.0)
-
-# Legacy aliases kept for callers that import them directly.
-STIFFNESS_HIP_PITCH = HIP_PITCH_GAINS.stiffness
-STIFFNESS_KNEE = KNEE_GAINS.stiffness
 
 # Command delay in physics substeps. With the 5 ms MJCF timestep, this models
 # 0-5 ms of actuator command lag and resamples once per policy step.
@@ -159,6 +163,7 @@ def _dc(
     velocity_limit=motor.velocity_limit,
     armature=motor.armature,
     frictionloss=motor.frictionloss,
+    viscous_damping=motor.viscous_damping,
     delay_min_lag=DELAY_MIN_LAG,
     delay_max_lag=DELAY_MAX_LAG,
     delay_hold_prob=DELAY_HOLD_PROB,
@@ -166,9 +171,7 @@ def _dc(
   )
 
 
-ASIMOV_1_ACTUATOR_HIP_PITCH = _dc(
-  (".*_hip_pitch_joint",), HIP_PITCH_GAINS, A6416
-)
+ASIMOV_1_ACTUATOR_HIP_PITCH = _dc((".*_hip_pitch_joint",), HIP_PITCH_GAINS, A6416)
 ASIMOV_1_ACTUATOR_HIP_ROLL = _dc((".*_hip_roll_joint",), HIP_ROLL_GAINS, A5013)
 ASIMOV_1_ACTUATOR_HIP_YAW = _dc((".*_hip_yaw_joint",), HIP_YAW_GAINS, A3814)
 ASIMOV_1_ACTUATOR_KNEE = _dc((".*_knee_joint",), KNEE_GAINS, A4315)
@@ -189,9 +192,7 @@ ASIMOV_1_ACTUATOR_SHOULDER_YAW = _dc(
   (".*_shoulder_yaw_joint",), SHOULDER_YAW_GAINS, A3814
 )
 ASIMOV_1_ACTUATOR_ELBOW = _dc((".*_elbow_joint",), ELBOW_GAINS, A4310_SINGLE)
-ASIMOV_1_ACTUATOR_WRIST = _dc(
-  (".*_wrist_yaw_joint",), WRIST_YAW_GAINS, A4310_SINGLE
-)
+ASIMOV_1_ACTUATOR_WRIST = _dc((".*_wrist_yaw_joint",), WRIST_YAW_GAINS, A4310_SINGLE)
 
 ASIMOV_1_ACTUATORS = (
   ASIMOV_1_ACTUATOR_HIP_PITCH,
@@ -212,34 +213,7 @@ ASIMOV_1_ACTUATORS = (
 # Keyframe config.
 ##
 
-# Deeper crouch for zero-action stand tests with the high ankle gains above.
-STANDING_KEYFRAME = EntityCfg.InitialStateCfg(
-  pos=(0, 0, 0.62),
-  joint_pos={
-    "left_hip_pitch_joint": -0.15,
-    "right_hip_pitch_joint": 0.15,
-    ".*_hip_roll_joint": 0.0,
-    ".*_hip_yaw_joint": 0.0,
-    "left_knee_joint": 0.45,
-    "right_knee_joint": -0.45,
-    "left_ankle_pitch_joint": -0.30,
-    "right_ankle_pitch_joint": 0.30,
-    ".*_ankle_roll_joint": 0.0,
-    "waist_yaw_joint": 0.0,
-    "left_shoulder_pitch_joint": -0.25,
-    "right_shoulder_pitch_joint": 0.25,
-    "left_shoulder_roll_joint": -0.05,
-    "right_shoulder_roll_joint": 0.05,
-    ".*_shoulder_yaw_joint": 0.0,
-    "left_elbow_joint": 0.40,
-    "right_elbow_joint": -0.40,
-    ".*_wrist_yaw_joint": 0.0,
-  },
-  joint_vel={".*": 0.0},
-)
-
-# Historical name kept for compatibility. In this full-body config this is the
-# milder standing pose used as the default learning initialization.
+# Default initialization pose: a mild standing crouch.
 KNEES_BENT_KEYFRAME = EntityCfg.InitialStateCfg(
   pos=(0, 0, 0.639),
   joint_pos={
@@ -277,16 +251,6 @@ FULL_COLLISION = CollisionCfg(
   },
   priority={r"^(left|right)_foot[1-4]_collision$": 1},
   friction={r"^(left|right)_foot[1-4]_collision$": (0.9,)},
-  disable_other_geoms=False,
-)
-
-FEET_ONLY_COLLISION = CollisionCfg(
-  geom_names_expr=(r"^(left|right)_foot[1-4]_collision$",),
-  contype=0,
-  conaffinity=1,
-  condim=3,
-  priority=1,
-  friction=(0.6,),
   disable_other_geoms=False,
 )
 

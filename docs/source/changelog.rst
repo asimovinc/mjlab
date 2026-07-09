@@ -14,6 +14,13 @@ Added
 - Added ``SimulationCfg.broadphase`` and ``SimulationCfg.broadphase_filter``
   to configure MuJoCo Warp's broadphase collision algorithm and
   bounding-volume filters.
+- Added the Asimov-1 humanoid (23-DOF full-body robot) and its velocity
+  tracking task (``Mjlab-Velocity-{Flat,Rough}-Asimov-1``).
+- Added optional left/right symmetry augmentation to the PPO config via
+  ``RslRlPpoAlgorithmCfg.symmetry_cfg``, forwarded to RSL-RL's data
+  augmentation and mirror loss.
+- Added a one-pole low-pass filter on joint position actions, enabled by
+  setting ``JointPositionActionCfg.lpf_cutoff_freq`` (Hz).
 
 Changed
 ^^^^^^^
@@ -27,10 +34,6 @@ Changed
 Fixed
 ^^^^^
 
-- Fixed Asimov-1 velocity task registration crashing during import because its
-  config tried to inject ``asset_cfg.site_names`` into ``foot_swing_height``,
-  even though that reward uses the foot height sensor directly and has no
-  ``asset_cfg`` parameter.
 - Fixed ``mdp.bad_orientation`` returning NaN when float32 rounding in
   ``quat_apply_inverse`` pushed the projected-gravity z-component slightly
   outside ``[-1, 1]``, making ``torch.acos`` return NaN and silently

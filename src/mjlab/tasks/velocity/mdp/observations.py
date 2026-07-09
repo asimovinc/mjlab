@@ -6,6 +6,7 @@ import torch
 
 from mjlab.sensor import ContactSensor
 from mjlab.sensor.terrain_height_sensor import TerrainHeightSensor
+from mjlab.utils.lab_api.math import quat_apply_inverse
 
 if TYPE_CHECKING:
   from mjlab.envs import ManagerBasedRlEnv
@@ -48,9 +49,17 @@ def foot_contact_forces(env: ManagerBasedRlEnv, sensor_name: str) -> torch.Tenso
 
 
 def projected_gravity_imu(env: ManagerBasedRlEnv, sensor_name: str) -> torch.Tensor:
-  """Projected gravity using an IMU up-vector sensor."""
+  """Gravity projected into the IMU frame, as the onboard IMU sees it.
+
+  Rotates the world gravity vector by the IMU orientation quaternion, decoupling
+  the observation from any IMU mount tilt. ``sensor_name`` is an
+  ``entity/sensor`` path (e.g. ``robot/imu_quat``); the entity supplies the
+  world gravity vector.
+  """
   sensor = env.scene[sensor_name]
-  return -sensor.data
+  entity_name = sensor_name.split("/", 1)[0]
+  asset = env.scene[entity_name]
+  return quat_apply_inverse(sensor.data, asset.data.gravity_vec_w)
 
 
 def gait_clock(env: ManagerBasedRlEnv, command_name: str) -> torch.Tensor:
@@ -58,6 +67,7 @@ def gait_clock(env: ManagerBasedRlEnv, command_name: str) -> torch.Tensor:
   command = env.command_manager.get_command(command_name)
   assert command is not None
   command_term = env.command_manager.get_term(command_name)
+  assert command_term is not None
   freq_base = getattr(command_term.cfg, "gait_freq_base", 0.5)
   freq_speed_scale = getattr(command_term.cfg, "gait_freq_speed_scale", 0.0)
   speed = torch.norm(command[:, :2], dim=1)

@@ -1,5 +1,4 @@
-"""Asimov 1 velocity environment configurations.
-"""
+"""Asimov 1 velocity environment configurations."""
 
 import math
 import os
@@ -89,8 +88,8 @@ def asimov_1_rough_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
     num_slots=1,
     history_length=4,
   )
-  # Body-ground contact for termination (holosoma: terminate if non-foot body hits ground)
-  # Only check bodies that should NEVER touch ground: knees, hips, torso, arms
+  # Body-ground contact for termination: bodies that should never touch the
+  # ground (knees, hips, torso, arms).
   body_ground_cfg = ContactSensorCfg(
     name="body_ground_contact",
     primary=ContactMatch(
@@ -133,8 +132,8 @@ def asimov_1_rough_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
   twist_cmd.viz.z_offset = 0.9  # Asimov torso height
 
   cfg.events["foot_friction"].params["asset_cfg"].geom_names = geom_names
-  cfg.events["foot_friction"].params["ranges"] = (0.8, 1.2)  # tighter DR
-  
+  cfg.events["foot_friction"].params["ranges"] = (0.8, 1.2)
+
   # =========================================================================
   # STAGGERED OBSERVATION DELAYS (matching real CAN slot timing)
   # =========================================================================
@@ -188,7 +187,6 @@ def asimov_1_rough_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
     "left_ankle_roll_joint",
     "right_ankle_roll_joint",
   )
-
 
   actor_base_terms = {
     "base_ang_vel": ObservationTermCfg(
@@ -343,14 +341,13 @@ def asimov_1_rough_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
   # DOMAIN RANDOMIZATION
   # =========================================================================
 
-  # Default joint position randomization (calibration error)
-  # ±0.02 rad (~1.1 deg) offset - simulates encoder zero offset.
-  # mjlab dr.qpos0 randomizes the model's qpos0 (default joint pose) field.
+  # Default joint position randomization: ±0.02 rad (~1.1 deg) offset to
+  # simulate encoder zero-offset (calibration) error.
   cfg.events["qpos0_rand"] = EventTermCfg(
     mode="startup",
     func=dr.qpos0,
     params={
-      "ranges": (-0.02, 0.02),  # match legs-only
+      "ranges": (-0.02, 0.02),
       "operation": "add",
       "asset_cfg": SceneEntityCfg("robot", joint_names=(".*",)),
     },
@@ -367,8 +364,7 @@ def asimov_1_rough_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
       "asset_cfg": SceneEntityCfg("robot"),
     },
   )
-  # Torso COM offset (payload on torso). mjlab dr.body_com_offset takes a
-  # per-axis ranges dict like the ported body_ipos randomization.
+  # Torso COM offset: simulates a payload mounted on the torso.
   cfg.events["base_com"] = EventTermCfg(
     mode="startup",
     func=dr.body_com_offset,
@@ -383,7 +379,7 @@ def asimov_1_rough_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
     },
   )
 
-  # Joint reset randomization (match G1: ±0.5 on pos and vel)
+  # Joint reset randomization: ±0.5 on position and velocity.
   cfg.events["reset_robot_joints"].params["position_range"] = (-0.5, 0.5)
   cfg.events["reset_robot_joints"].params["velocity_range"] = (-0.5, 0.5)
 
@@ -560,7 +556,7 @@ def asimov_1_rough_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
   cfg.terminations["fell_over"].params["limit_angle"] = math.radians(70.0)
 
   # =========================================================================
-  # VELOCITY - Full speed from start 
+  # VELOCITY COMMANDS
   # =========================================================================
   twist_cmd.ranges.lin_vel_x = (-0.8, 0.8)
   twist_cmd.ranges.lin_vel_y = (-0.6, 0.6)
@@ -570,14 +566,11 @@ def asimov_1_rough_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
   twist_cmd.gait_freq_base = 0.5
   twist_cmd.gait_freq_speed_scale = 1.5
 
-  # Velocity curriculum removed — full range from start.
+  # Train on the full velocity range from the start (no curriculum).
   assert cfg.curriculum is not None
   cfg.curriculum.pop("command_vel", None)
 
-  # No force curriculum — fixed ±50N from start
-
-  # Use default push_robot and reset_base 
-  # Apply play mode overrides
+  # Play mode overrides.
   if play:
     cfg.episode_length_s = int(1e9)
 
