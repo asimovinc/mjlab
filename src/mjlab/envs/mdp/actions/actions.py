@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -177,6 +178,9 @@ class JointPositionActionCfg(BaseActionCfg):
   """Configuration for joint position control."""
 
   use_default_offset: bool = True
+  lpf_cutoff_freq: float | None = None
+  """Optional one-pole low-pass cutoff frequency (Hz) applied to the position
+  targets. ``None`` (default) disables filtering. Typical value: 10-20 Hz."""
 
   def __post_init__(self):
     self.transmission_type = TransmissionType.JOINT
@@ -215,8 +219,33 @@ class JointPositionAction(BaseAction):
   def __init__(self, cfg: JointPositionActionCfg, env: ManagerBasedRlEnv):
     super().__init__(cfg=cfg, env=env)
 
+    self._default_pos = self._entity.data.default_joint_pos[:, self._target_ids]
     if cfg.use_default_offset:
-      self._offset = self._entity.data.default_joint_pos[:, self._target_ids].clone()
+      self._offset = self._default_pos.clone()
+
+    # One-pole low-pass on the position targets. Discrete coefficient
+    # alpha = dt / (RC + dt) with RC = 1 / (2*pi*fc), evaluated at the policy
+    # control timestep. State starts at the default pose.
+    self._lpf_enabled = cfg.lpf_cutoff_freq is not None
+    if self._lpf_enabled:
+      assert cfg.lpf_cutoff_freq is not None
+      rc = 1.0 / (2.0 * math.pi * cfg.lpf_cutoff_freq)
+      self._lpf_alpha = env.step_dt / (rc + env.step_dt)
+      self._lpf_state = self._default_pos.clone()
+
+  def process_actions(self, actions: torch.Tensor):
+    super().process_actions(actions)
+    if self._lpf_enabled:
+      self._lpf_state = self._lpf_state + self._lpf_alpha * (
+        self._processed_actions - self._lpf_state
+      )
+      self._processed_actions = self._lpf_state
+
+  def reset(self, env_ids: torch.Tensor | slice | None = None) -> None:
+    super().reset(env_ids)
+    if self._lpf_enabled:
+      idx = slice(None) if env_ids is None else env_ids
+      self._lpf_state[idx] = self._default_pos[idx]
 
   def apply_actions(self) -> None:
     encoder_bias = self._entity.data.encoder_bias[:, self._target_ids]

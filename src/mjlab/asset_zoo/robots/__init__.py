@@ -1,3 +1,9 @@
+from mjlab.asset_zoo.robots.asimov_1.asimov_1_constant import (
+  ASIMOV_1_ACTION_SCALE as ASIMOV_1_ACTION_SCALE,
+)
+from mjlab.asset_zoo.robots.asimov_1.asimov_1_constant import (
+  get_asimov_1_robot_cfg as get_asimov_1_robot_cfg,
+)
 from mjlab.asset_zoo.robots.i2rt_yam.yam_constants import (
   YAM_ACTION_SCALE as YAM_ACTION_SCALE,
 )
