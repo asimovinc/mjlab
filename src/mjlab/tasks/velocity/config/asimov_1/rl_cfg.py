@@ -39,8 +39,7 @@ def asimov_1_ppo_runner_cfg() -> RslRlOnPolicyRunnerCfg:
       lam=0.95,
       desired_kl=0.01,
       max_grad_norm=1.0,
-      # Mirror every transition left/right so the policy learns a symmetric
-      # gait instead of a spontaneous limp.
+      # Mirror every transition left/right so the policy learns a symmetric gait
       symmetry_cfg={
         "use_data_augmentation": True,
         "use_mirror_loss": True,

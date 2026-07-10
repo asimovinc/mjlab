@@ -391,7 +391,7 @@ def asimov_1_rough_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
     params={
       "velocity_range": {
         "x": (-0.5, 0.5),
-        "y": (-0.5, 0.5),  # lateral — forces sidestep
+        "y": (-0.5, 0.5), 
         "z": (-0.3, 0.3),
         "roll": (-0.4, 0.4),
         "pitch": (-0.4, 0.4),
@@ -587,7 +587,7 @@ def asimov_1_rough_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
     ):
       cfg.events.pop(_ev, None)
 
-    # Zero out joint reset jitter so init pose is exactly the nominal crouch
+    # Zero out joint reset jitter so init pose is exactly the nominal pose
     cfg.events["reset_robot_joints"].params["position_range"] = (0.0, 0.0)
     cfg.events["reset_robot_joints"].params["velocity_range"] = (0.0, 0.0)
 

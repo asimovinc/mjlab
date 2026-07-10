@@ -213,8 +213,8 @@ ASIMOV_1_ACTUATORS = (
 # Keyframe config.
 ##
 
-# Default initialization pose: a mild standing crouch.
-KNEES_BENT_KEYFRAME = EntityCfg.InitialStateCfg(
+# Default initialization pose: a stable standing position.
+KNEES_STAND_KEYFRAME = EntityCfg.InitialStateCfg(
   pos=(0, 0, 0.639),
   joint_pos={
     "left_hip_pitch_joint": 0.1,
@@ -267,7 +267,7 @@ ASIMOV_1_ARTICULATION = EntityArticulationInfoCfg(
 def get_asimov_1_robot_cfg() -> EntityCfg:
   """Return a fresh Asimov 1 robot config."""
   return EntityCfg(
-    init_state=KNEES_BENT_KEYFRAME,
+    init_state=KNEES_STAND_KEYFRAME,
     collisions=(FULL_COLLISION,),
     spec_fn=get_spec,
     articulation=ASIMOV_1_ARTICULATION,
